@@ -30,9 +30,9 @@ source_portal_url = 'https://sourceorg.maps.arcgis.com'
 source_password = 'password'
 
 # Log file location - specify the location of the log file to be created
-logging.basicConfig(filename = r".\CopyUsers_log.txt", level=logging.INFO)
+logging.basicConfig(filename = r".\GeneratePrep_log.txt", level=logging.INFO)
 now = datetime.datetime.now()
-logging.info("{}  Begin user migration".format(str(now)))
+logging.info("{}  Begin item prep".format(str(now)))
 
 basePath = r"."
 itemsXLS = os.path.join(basePath,  "Item_Prep.xlsx")
