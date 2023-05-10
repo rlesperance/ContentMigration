@@ -211,10 +211,12 @@ for index, source_item in itemsDF.iterrows():
             continue
         if source_item["itemID"] == sourcekey[0].partition("-")[2]:
             print ("{}: {} is already in target".format(source_item["title"], source_item["type"]))
+            logging.info("{}: {} is already in target".format(source_item["title"], source_item["type"]))
             source_target_dict["TargetID"] = x.id
             exists = True
     if not exists and not source_item["type"] in ['Operation View', 'Application', 'Notebook', 'Web Experience']:
         print("Copying {}: Type: {}  for {}".format(source_item["title"], source_item["type"], source_item["owner"]))
+        logging.info("Copying {}: Type: {}  for {}".format(source_item["title"], source_item["type"], source_item["owner"]))
         target_item = copy_item(target, source_item)
         if target_item:
             source_target_dict["TargetID"] = target_item.id
@@ -222,6 +224,7 @@ for index, source_item in itemsDF.iterrows():
             source_target_dict["TargetID"] = "Failed To Copy"
         
     source_target_itemId_map.append(source_target_dict)
+    logging.info(source_target_dict)
 ```
 
 
@@ -233,4 +236,6 @@ itemsXLS = os.path.join(basePath, "Pepco_Migration", "FixApps_item_mapping.xlsx"
 df = pd.DataFrame.from_dict(source_target_itemId_map)
 with pd.ExcelWriter(itemsXLS, engine='openpyxl') as writer:
     df.to_excel(writer)
+
+logging.info("Mapping file: {}".format(itemsXLS))
 ```
