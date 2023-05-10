@@ -47,9 +47,10 @@ target_portal_url = 'https://targetorg.arcgis.com'
 target_password = 'password'
 
 # Log file location - specify the location of the log file to be created
-logging.basicConfig(filename = r".\CopyUsers_log.txt", level=logging.INFO)
+#If run in Online notebook, log to:  "/arcgis/home/CopyItems_log.txt"
+logging.basicConfig(filename = r".\CopyItems_log.txt", level=logging.INFO)
 now = datetime.datetime.now()
-logging.info("{}  Begin user migration".format(str(now)))
+logging.info("{}  Begin item migration".format(str(now)))
 
 basePath = r"."
 userXLS = os.path.join(basePath,  "User_Mapping.xlsx")
@@ -57,10 +58,6 @@ groupXLS = os.path.join(basePath,  "Group_Mapping.xlsx")
 itemsXLS = os.path.join(basePath,  "Item_Prep.xlsx")
 itemMapXLS = os.path.join(basePath,  "Item_Mapping.xlsx")
 
-#Are we replicating item properties?
-assignOwner = True
-assignSharing = True
-assignCategories = True
 ```
 
 ## Connect to source and target portals
@@ -114,7 +111,6 @@ def groupIDsList(groups):
 def copy_item(target, source_item, copydata=True):
     try:
 
-        item_properties = {}
         #Get actual item
         item = source.content.get(source_item["itemID"])
 
@@ -138,12 +134,12 @@ def copy_item(target, source_item, copydata=True):
             target_user_folders = [f['title'] for f in target_item_owner.folders
                                    if f['title'] == folder_name]
             if len(target_user_folders) == 0:
-                #create the folder
                 target.content.create_folder(folder_name, target_item_owner.username)
         
     except Exception as copy_ex:
         print("\tError in copy setup " + source_item['title'])
         print("\t" + str(copy_ex))
+        logging.error(copy_ex)
         return None
     
     try:
@@ -155,33 +151,9 @@ def copy_item(target, source_item, copydata=True):
     except Exception as copy_ex:
         print("\tError in copying " + source_item['title'])
         print("\t" + str(copy_ex))
+        logging.error(copy_ex)
         return None
     
-    try:
-        newtitle = "{}_{}".format(org, source_item['title'])
-        print ("Changing name to {}".format(newtitle))
-        cloned_item.update(item_properties={'title':newtitle})
-        
-        #Set sharing (privacy) information
-        print ("Set sharing for item {}".format(cloned_item.title))
-        share_everyone = item.access == 'public'
-        share_org = item.access in ['org', 'public']
-        share_groups = []
-        if 'groups' in source_item:
-            print ("creating sharing groups...")
-            share_groups = groupIDsList(source_item["groups"])
-        print (share_everyone, share_org, share_groups)
-        cloned_item.share(everyone=share_everyone, org=share_org, groups=share_groups)
-        
-        categories = source_item["Categories"]
-        itemlist = [{cloned_item.id:{"categories": ["/Categories/{}".format(categories)]}}]
-        target.content.categories.assign_to_items(items=itemlist)
-        
-
-    except Exception as copy_ex:
-        print("\tError sharing " + source_item['title'])
-        print("\t" + str(copy_ex))
-
     return cloned_item
 ```
 
@@ -193,7 +165,6 @@ def copy_item(target, source_item, copydata=True):
 #*****  CYCLE THROUGH DICTIONARY AND COPY ITEMS  **********
 #**********************************************************
 source_target_itemId_map = []  #Title, SourceID, Type, TargetID
-#iterations = 1000
 for index, source_item in itemsDF.iterrows():
 #for source_item in source_items_by_id:
     
@@ -203,6 +174,7 @@ for index, source_item in itemsDF.iterrows():
     source_target_dict["Type"] = source_item["type"]
     source_target_dict["Owner"] = source_item["owner"]
     source_target_dict["TargetID"] = ""
+    
     #check if already there
     exists = False
     for x in target.content.search(source_item["title"]):
