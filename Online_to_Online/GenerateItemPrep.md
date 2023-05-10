@@ -92,6 +92,7 @@ for user in source_users:
             source_items_by_id.append(source_item)
     
     print("Number of folders {} # Number of items {}".format(str(num_folders), str(num_items)))
+    logging.info("Number of folders {} # Number of items {}".format(str(num_folders), str(num_items)))
 ```
 
 Add groups for each item
@@ -110,6 +111,7 @@ for group in source_groups:
             source_items_by_id[itemnum] = item
         except:
             print("Cannot find item : " + group_item.itemid)
+     logging.info("Group reviewed: {}".format(group.title))
 ```
 Export to XLSX
 ```python
@@ -117,6 +119,8 @@ sourceDF = pd.DataFrame.from_dict(source_items_by_id)
 
 with pd.ExcelWriter(itemsXLS, engine='openpyxl') as writer:
     sourceDF.to_excel(writer)
+    
+logging.info("Prep file created:  {}".format(itemXLS))
 ```
 
 
