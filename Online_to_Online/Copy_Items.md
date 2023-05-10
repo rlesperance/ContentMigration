@@ -82,6 +82,9 @@ Group IDs in the target must be mapped to the IDs from the source
 userDF = pd.read_excel(userXLS, engine='openpyxl')
 #Get user mapping from exported XLSX (generated in CopyGroups notebook)
 groupDF = pd.read_excel(groupXLS,  engine='openpyxl')
+
+itemsDF = pd.read_excel(itemsXLS,  engine='openpyxl')
+
 ```
 
 
@@ -185,9 +188,6 @@ def copy_item(target, source_item, copydata=True):
 ## Loop through items from xls prep and clone
 
 ```python
-itemsXLS = os.path.join(basePath, "Pepco_Migration", "Pepco_Item_Prep_Run1Fix.xlsx")
-itemsDF = pd.read_excel(itemsXLS,  engine='openpyxl')
-itemsDF
 
 #**********************************************************
 #*****  CYCLE THROUGH DICTIONARY AND COPY ITEMS  **********
