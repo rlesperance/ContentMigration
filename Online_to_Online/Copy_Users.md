@@ -31,14 +31,13 @@ target_portal_url = 'https://targetorg.arcgis.com'
 #target_password = getpass(prompt='Please enter the password for the target Portal') # This will prompt you for the password rather then storing it
 target_password = 'password'
 
-org = 'newOrg'   #This is going to be tagged to the end of each username
 
 # Log file location - specify the location of the log file to be created
-logging.basicConfig(filename = r".\CopyUsers_log.txt", level=logging.INFO)
+basePath = r"C:\some path"
+logging.basicConfig(filename = os.path.join(basePath,"CopyUsers_log.txt"), level=logging.INFO)
 now = datetime.datetime.now()
 logging.info("{}  Begin user migration".format(str(now)))
 
-basePath = r"."
 usermapXLS = os.path.join(basePath, "User_Mapping.xlsx")
 ```
 
@@ -48,7 +47,8 @@ usermapXLS = os.path.join(basePath, "User_Mapping.xlsx")
 # Instantiate Portal connections - use verify_cert = False to use self signed SSL
 source = GIS(source_portal_url, source_admin_username, source_password, verify_cert = False, expiration = 9999)
 logging.info("Connected to source portal "+source_portal_url+" as "+source_admin_username)
-target = GIS(target_portal_url, target_admin_username, target_password, verify_cert = False)
+
+target = GIS(target_portal_url, target_admin_username, target_password, verify_cert = False, expiration = 9999)
 logging.info("Connected to target portal "+target_portal_url+" as "+target_admin_username)
 ```
 
@@ -78,13 +78,16 @@ def copy_user(target_portal, source_user, password, org):
         last_name = full_name.split(maxsplit = 1)[1]
     except:
         last_name = 'NoLastName'
-    
+
+    org = "newOrgNm"
     newusername = source_user.username
     if re.search(org, newusername, re.IGNORECASE):
         newusername = "{}_{}".format(newusername, "1")
     else:
         newusername = "{}_{}".format(newusername, org)
-        
+
+    userType = source_user.user_types()['name']
+
     userRole = source_user.role
     if userRole == "org_admin":
         userRole = "org_user"
@@ -97,7 +100,7 @@ def copy_user(target_portal, source_user, password, org):
                                                  email = source_user.email, 
                                                  description = source_user.description, 
                                                  role = userRole,
-                                                 user_type = "Creator")
+                                                 user_type = userType)
 
         if source_user.role == "org_admin":
             target_user.update_role("org_admin")
@@ -114,6 +117,7 @@ def copy_user(target_portal, source_user, password, org):
         print("Unable to create user "+ newusername)
         print (str(sys.exc_info()) + "\n")
         print(traceback.format_tb(sys.exc_info()[2])[0] + "\n")
+        logging.error(Ex)
         return None
 ```
 
@@ -131,7 +135,8 @@ for u in source_users:
     targetUserCheck = target.users.get("{}_{}".format(u.username, org))
     if targetUserCheck:
         print ("Username {} already in target site".format(u.username))
-        userMap["targetname"] = "Already in Target"
+        targetuser = targetUserCheck[0]
+        userMap["targetname"] = targetuser.username
         continue
 
     new_user = copy_user(target, u, "ChangeMe12345", org)
