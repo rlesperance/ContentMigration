@@ -29,15 +29,15 @@ target_portal_url = 'https://targetorg.arcgis.com'
 #target_password = getpass(prompt='Please enter the password for the target Portal') # This will prompt you for the password rather then storing it
 target_password = 'password'
 
-org = 'newOrg'   #This is going to be tagged to the end of each username
 
 # Log file location - specify the location of the log file to be created
-logging.basicConfig(filename = r".\CopyUsers_log.txt", level=logging.INFO)
+basePath = r"C:\Location"
+logging.basicConfig(filename = os.path.join(basePath,"CopyRoles_log.txt"), level=logging.INFO)
 now = datetime.datetime.now()
-logging.info("{}  Begin user migration".format(str(now)))
+logging.info("{}  Begin role migration".format(str(now)))
 
-basePath = r"."
-usermapXLS = os.path.join(basePath, "User_Mapping.xlsx")
+
+usermapXLS = os.path.join(basePath, "Role_Mapping.xlsx")
 ```
 
 ## Connect to source and target portals
@@ -46,6 +46,7 @@ usermapXLS = os.path.join(basePath, "User_Mapping.xlsx")
 # Instantiate Portal connections - use verify_cert = False to use self signed SSL
 source = GIS(source_portal_url, source_admin_username, source_password, verify_cert = False, expiration = 9999)
 logging.info("Connected to source portal "+source_portal_url+" as "+source_admin_username)
+
 target = GIS(target_portal_url, target_admin_username, target_password, verify_cert = False)
 logging.info("Connected to target portal "+target_portal_url+" as "+target_admin_username)
 ```
