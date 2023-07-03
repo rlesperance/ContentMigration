@@ -47,12 +47,13 @@ target_portal_url = 'https://targetorg.arcgis.com'
 target_password = 'password'
 
 # Log file location - specify the location of the log file to be created
+basePath = r"C:\somewhere"
+
 #If run in Online notebook, log to:  "/arcgis/home/CopyItems_log.txt"
-logging.basicConfig(filename = r".\CopyItems_log.txt", level=logging.INFO)
-now = datetime.datetime.now()
+logging.basicConfig(filename = os.path.join(basePath,"CopyItems_log.txt"), level=logging.INFO)
+now = datetime.now()
 logging.info("{}  Begin item migration".format(str(now)))
 
-basePath = r"."
 userXLS = os.path.join(basePath,  "User_Mapping.xlsx")
 groupXLS = os.path.join(basePath,  "Group_Mapping.xlsx")
 itemsXLS = os.path.join(basePath,  "Item_Prep.xlsx")
@@ -66,7 +67,8 @@ itemMapXLS = os.path.join(basePath,  "Item_Mapping.xlsx")
 # Instantiate Portal connections - use verify_cert = False to use self signed SSL
 source = GIS(source_portal_url, source_admin_username, source_password, verify_cert = False, expiration = 9999)
 logging.info("Connected to source portal "+source_portal_url+" as "+source_admin_username)
-target = GIS(target_portal_url, target_admin_username, target_password, verify_cert = False)
+
+target = GIS(target_portal_url, target_admin_username, target_password, verify_cert = False, expiration = 9999)
 logging.info("Connected to target portal "+target_portal_url+" as "+target_admin_username)
 ```
 
@@ -79,7 +81,7 @@ Group IDs in the target must be mapped to the IDs from the source
 userDF = pd.read_excel(userXLS, engine='openpyxl')
 #Get user mapping from exported XLSX (generated in CopyGroups notebook)
 groupDF = pd.read_excel(groupXLS,  engine='openpyxl')
-
+#Get Item Prep document
 itemsDF = pd.read_excel(itemsXLS,  engine='openpyxl')
 
 ```
@@ -178,7 +180,7 @@ for index, source_item in itemsDF.iterrows():
     #check if already there
     exists = False
     for x in target.content.search(source_item["title"]):
-        sourcekey = [s for s in x.typeKeywords if 'source' in s]
+        sourcekey = [s for s in x.typeKeywords if 'source-' in s]
         if not sourcekey:
             continue
         if source_item["itemID"] == sourcekey[0].partition("-")[2]:
