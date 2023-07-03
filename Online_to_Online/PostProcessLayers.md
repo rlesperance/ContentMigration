@@ -47,11 +47,11 @@ target_portal_url = 'https://targetorg.arcgis.com'
 target_password = 'password'
 
 # Log file location - specify the location of the log file to be created
-logging.basicConfig(filename = r".\UpdateItems_log.txt", level=logging.INFO)
+basePath = r"C:\somewhere"
+logging.basicConfig(filename = os.path.join(basePath, "UpdateItems_log.txt"), level=logging.INFO)
 now = datetime.datetime.now()
 logging.info("{}  Begin user migration".format(str(now)))
 
-basePath = r"."
 userXLS = os.path.join(basePath,  "User_Mapping.xlsx")
 groupXLS = os.path.join(basePath,  "Group_Mapping.xlsx")
 itemsXLS = os.path.join(basePath,  "Item_Prep.xlsx")
@@ -69,7 +69,8 @@ assignCategories = True
 # Instantiate Portal connections - use verify_cert = False to use self signed SSL
 source = GIS(source_portal_url, source_admin_username, source_password, verify_cert = False, expiration = 9999)
 logging.info("Connected to source portal "+source_portal_url+" as "+source_admin_username)
-target = GIS(target_portal_url, target_admin_username, target_password, verify_cert = False)
+
+target = GIS(target_portal_url, target_admin_username, target_password, verify_cert = False, expiration = 9999)
 logging.info("Connected to target portal "+target_portal_url+" as "+target_admin_username)
 ```
 
@@ -125,7 +126,7 @@ def updateProperties(source_item, item):
     #Source ID from old ORG so other related cloned maps and apps will find it
     print ("  Update Keywords")
     keywords = target_item.typeKeywords
-    targetMap = [s for s in keywords if 'source' in s]
+    targetMap = [s for s in keywords if 'source-' in s]
     if targetMap:
         targetMapParse = targetMap[0].partition("-")[2]
         print ("  Source keyword exists: {}".format(targetMapParse))
@@ -144,6 +145,12 @@ def updateProperties(source_item, item):
         share_groups = groupIDsList(source_item["groups"])
     print (share_everyone, share_org, share_groups)
     target_item.share(everyone=share_everyone, org=share_org, groups=share_groups)
+
+    #might need to check if categories keyword exists if org has no categories
+    categories = source_item["Categories"]
+    itemlist = [{target_item.id:{"categories": ["/Categories/{}".format(categories)]}}]
+    if len(categories) > 0:
+        target.content.categories.assign_to_items(items=itemlist)
 ```
 
 ## Loop through items from xls prep and clone
