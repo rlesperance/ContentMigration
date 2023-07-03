@@ -35,11 +35,13 @@ target_portal_url = 'https://targetorg.arcgis.com'
 target_password = 'password'
 
 # Log file location - specify the location of the log file to be created
-logging.basicConfig(filename = r".\CopyUsers_log.txt", level=logging.INFO)
+basePath = r"C:\somewhere"
+logging.basicConfig(filename = os.path.join(basePath, "UpdateGroups_log.txt"), level=logging.INFO)
 now = datetime.datetime.now()
-logging.info("{}  Begin user migration".format(str(now)))
+logging.info("{}  Begin group migration".format(str(now)))
 
-basePath = r"."
+
+basePath = r"C:\Somewhere"
 userXLS = os.path.join(basePath, "User_Mapping.xlsx")
 groupmapXLS = os.path.join(basePath, "Group_Mapping.xlsx")
 ```
@@ -50,7 +52,8 @@ groupmapXLS = os.path.join(basePath, "Group_Mapping.xlsx")
 # Instantiate Portal connections - use verify_cert = False to use self signed SSL
 source = GIS(source_portal_url, source_admin_username, source_password, verify_cert = False, expiration = 9999)
 logging.info("Connected to source portal "+source_portal_url+" as "+source_admin_username)
-target = GIS(target_portal_url, target_admin_username, target_password, verify_cert = False)
+
+target = GIS(target_portal_url, target_admin_username, target_password, verify_cert = False, expiration = 9999)
 logging.info("Connected to target portal "+target_portal_url+" as "+target_admin_username)
 ```
 
@@ -116,7 +119,18 @@ def copy_group(target, source, source_group):
             return None
         
         try:
-            #ADD MEMBERS TO GROUP
+            #Does the source group allow non-org users?   ARCGIS ONLINE ONLY
+            if not hasattr(group, "membershipAccess"):
+                updateurl = "https://www.arcgis.com/sharing/rest/community/groups/{}/update".format(new_group.id)
+                agoltoken = target._con.token
+                parameters = urllib.parse.urlencode({'membershipAccess': None, 'clearEmptyFields': True, 'token':agoltoken, 'f': 'json'}).encode('utf-8')
+                parameters
+                response = urllib.request.urlopen(updateurl, parameters).read().decode('utf-8')
+
+                jsonResponse = json.loads(response)
+                print ("Group changed to open membership: {}".format(jsonResponse['success']))
+
+           #ADD MEMBERS TO GROUP
             print ("   Adding Members - ".format(new_group.title))
             members = source_group.get_members()
             if not members['owner'] == target_admin_username:
@@ -126,16 +140,20 @@ def copy_group(target, source, source_group):
             if members['users']:
                 for user in members['users']:
                     newuser = getNewUsername(user)
-                    if not newuser == None:
+                    if newuser:
                         if user in members['admins']:
                             new_group.add_users(newuser, admins = newuser)
                         else:
                             new_group.add_users(newuser)
+                    else:
+                        print ("Inviting user: {}".format(user))  #User isn't in the org
+                        new_group.invite_users([user])
         except Exception as Ex:
             print(str(Ex))
             print("Unable to add memebers "+ source_group.title)
             print (str(sys.exc_info()) + "\n")
             print(traceback.format_tb(sys.exc_info()[2])[0] + "\n")
+            logging.error(Ex)
 
         return new_group
 ```
@@ -152,13 +170,15 @@ for group in source_groups:
     
     target_groups = target.groups.search(query="title: {}".format(group.title))
     exists = False
+    target_group = None
     for tg in target_groups:
         if tg.title == group.title:
             exists = True
+            target_group = tg
             
     if exists:
         print ("{}:  group already exists".format(group.title))
-        groupMap["targetID"] = "EXISTS"
+        groupMap["targetID"] = target_group.id
     else:
         
         target_group = copy_group(target, source, group)
