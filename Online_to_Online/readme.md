@@ -1,4 +1,5 @@
-General workflow for migrating users/groups/roles/content from one ArcGIS Online organization to another
+## General workflow 
+For migrating users/groups/roles/content from one ArcGIS Online organization to another
 
 This is the order these scripts should be run, and generally what they do.  See the individual items for more detail. 
 Examples of the input/output XLS documents are included in this repository.  Any of these can be created on the fly if the routines creating them don't need to be run (for instance if you've already created the users on the target). 
@@ -11,11 +12,13 @@ Looks for and copies any non-stock roles the admins have created in the source o
 
 Copies all users from source org to target org.  This is a true clone, so in ArcGIS Online there cannot be users in two different organizations with the same usersname.  
 Output from this script is an XLS sheet that maps the old username to the new username to be used in subsequent scripts for assigning content and group ownership and membership. 
+     
      OUTPUT: User_Mapping.XLSX
 
 3. COPYGROUPS
 
 Copies all non-stock groups from source organization to target organization and assigns ownership to mapped user and adds mapped user members.
+     
      INPUT:  User_Mapping.XLSX
      OUTPUT: Groups_Mapping.XLSX
 
@@ -23,6 +26,7 @@ Copies all non-stock groups from source organization to target organization and 
 
 Generates a list of content from the source site and what groups each items is shared to.  The output is an XLS document listing the source item's ID, ownership and groups.  
 This can be input into subsequent scripts in total or as a subset.  Save this output as a copy and then remove lines you don't want as input in the following scripts. 
+     
      OUTPUT: Item_Prep.XLSX
 
 5. COPYITEMS
