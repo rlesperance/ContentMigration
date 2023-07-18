@@ -206,9 +206,8 @@ for index, source_item in itemsDF.iterrows():
 A record of what happened.  Items not copied will indicate they didn't copy
 
 ```python
-itemsXLS = os.path.join(basePath, "Pepco_Migration", "FixApps_item_mapping.xlsx")
 df = pd.DataFrame.from_dict(source_target_itemId_map)
-with pd.ExcelWriter(itemsXLS, engine='openpyxl') as writer:
+with pd.ExcelWriter(itemMapXLS, engine='openpyxl') as writer:
     df.to_excel(writer)
 
 logging.info("Mapping file: {}".format(itemsXLS))
