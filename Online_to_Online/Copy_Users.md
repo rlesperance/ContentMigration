@@ -132,7 +132,8 @@ for u in source_users:
     userMap["sourcename"] = u.username
     userMap["fullname"] = u.fullName
     
-    targetUserCheck = target.users.get("{}_{}".format(u.username, org))
+    #targetUserCheck = target.users.get("{}_{}".format(u.username, org))
+    users = target.users.search(u.email)
     if targetUserCheck:
         print ("Username {} already in target site".format(u.username))
         targetuser = targetUserCheck[0]
