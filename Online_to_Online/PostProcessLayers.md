@@ -29,7 +29,7 @@ from getpass import getpass
 import pandas as pd
 import logging
 from datetime import datetime
-import sys, os
+import sys, os, ast
 import tempfile
 import traceback
 import openpyxl
@@ -82,7 +82,7 @@ Group IDs in the target must be mapped to the IDs from the source
 userDF = pd.read_excel(userXLS, engine='openpyxl')  # User mapping XLS
 groupDF = pd.read_excel(groupXLS,  engine='openpyxl')  # Group mapping XLS
 itemsDF = pd.read_excel(itemsXLS,  engine='openpyxl')  # Item Prep XLS
-newitemsDF = pd.read_excel(newitemsXLS,  engine='openpyxl')  #Item Mapping XLS
+newitemsDF = pd.read_excel(itemMapXLS,  engine='openpyxl')  #Item Mapping XLS
 ```
 
 
