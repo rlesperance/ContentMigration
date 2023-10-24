@@ -35,7 +35,7 @@ target_password = 'password'
 # Log file location - specify the location of the log file to be created
 basePath = r"C:\some path"
 logging.basicConfig(filename = os.path.join(basePath,"CopyUsers_log.txt"), level=logging.INFO)
-now = datetime.datetime.now()
+now = datetime.now()
 logging.info("{}  Begin user migration".format(str(now)))
 
 usermapXLS = os.path.join(basePath, "User_Mapping.xlsx")
@@ -59,7 +59,7 @@ logging.info("Connected to target portal "+target_portal_url+" as "+target_admin
 source_users = source.users.search('!esri_ & !esri_livingatlas',max_users=99999)
 
 print (source_users)
-logging.info("Total users to migrate: {}".foramt(len(source_users)))
+logging.info("Total users to migrate: {}".format(len(source_users)))
 ```
 
 ## Functions
@@ -70,7 +70,7 @@ def GetUserTypeName(userType):
     typeDescr = next(item for item in userTypes if item["Type"]==userType)
     return typeDescr["Descr"]
 
-def copy_user(target_portal, source_user, password, org):
+def copy_user(target_portal, source_user, password):
     # split the fullName
     full_name = source_user.fullName
     first_name = full_name.split()[0]
@@ -132,15 +132,16 @@ for u in source_users:
     userMap["sourcename"] = u.username
     userMap["fullname"] = u.fullName
     
-    #targetUserCheck = target.users.get("{}_{}".format(u.username, org))
     users = target.users.search(u.email)
-    if targetUserCheck:
+    if users:
+        targetuser = users[0]
         print ("Username {} already in target site".format(u.username))
-        targetuser = targetUserCheck[0]
         userMap["targetname"] = targetuser.username
+        logging.info(userMap)
+        userMapping.append(userMap)
         continue
 
-    new_user = copy_user(target, u, "ChangeMe12345", org)
+    new_user = copy_user(target, u, "ChangeMe12345")
     if new_user:
         userMap["targetname"] = new_user.username
     else:
