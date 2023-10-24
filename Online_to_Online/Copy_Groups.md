@@ -30,14 +30,14 @@ source_password = 'password'
 
 # Target Portal information
 target_admin_username = 'adminuser'
-target_portal_url = 'https://targetorg.arcgis.com'
+target_portal_url = 'https://targetorg.maps.arcgis.com'
 #target_password = getpass(prompt='Please enter the password for the target Portal') # This will prompt you for the password rather then storing it
 target_password = 'password'
 
 # Log file location - specify the location of the log file to be created
 basePath = r"C:\somewhere"
 logging.basicConfig(filename = os.path.join(basePath, "UpdateGroups_log.txt"), level=logging.INFO)
-now = datetime.datetime.now()
+now = datetime.now()
 logging.info("{}  Begin group migration".format(str(now)))
 
 
@@ -162,6 +162,7 @@ def copy_group(target, source, source_group):
 
 ```python
 groupMapping = []
+source_groups = source.groups.search(max_groups=9999)
 for group in source_groups:
     groupMap = {}
     groupMap["groupname"] = group.title
@@ -176,7 +177,7 @@ for group in source_groups:
             exists = True
             target_group = tg
             
-    if exists:
+    if exists:  #Add something here to add the users to existing group
         print ("{}:  group already exists".format(group.title))
         groupMap["targetID"] = target_group.id
     else:
