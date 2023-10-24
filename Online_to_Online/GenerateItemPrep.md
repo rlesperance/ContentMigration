@@ -30,11 +30,11 @@ source_portal_url = 'https://sourceorg.maps.arcgis.com'
 source_password = 'password'
 
 # Log file location - specify the location of the log file to be created
-logging.basicConfig(filename = r".\GeneratePrep_log.txt", level=logging.INFO)
-now = datetime.datetime.now()
+basePath = r"."
+logging.basicConfig(filename = os.path.join(basePath, "GeneratePrep_log.txt"), level=logging.INFO)
+now = datetime.now()
 logging.info("{}  Begin item prep".format(str(now)))
 
-basePath = r"."
 itemsXLS = os.path.join(basePath,  "Item_Prep.xlsx")
 
 ```
@@ -120,7 +120,7 @@ sourceDF = pd.DataFrame.from_dict(source_items_by_id)
 with pd.ExcelWriter(itemsXLS, engine='openpyxl') as writer:
     sourceDF.to_excel(writer)
     
-logging.info("Prep file created:  {}".format(itemXLS))
+logging.info("Prep file created:  {}".format(itemsXLS))
 ```
 
 
