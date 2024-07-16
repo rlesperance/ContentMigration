@@ -210,3 +210,38 @@ for index, source_user in userDF.iterrows():
     user.disable()
 ```
 
+## Code
+Optional code for using the same spreadsheet input to delete the users. 
+Must remove their add-on extension licensing before removing them
+   - (also assumes they don't now own any content)
+
+```python
+def deleteUser(user):
+
+    try:
+        licenses = gis.admin.license.all()
+        for lic in licenses:
+
+            licType = lic.properties['listing']['title']
+            ents = lic.user_entitlement(user.username)
+
+            license = gis.admin.license.get(licType)
+
+            if ents:
+                license.revoke(username=user.username, entitlements='*')
+                print ("...revoked license  {}".format(ents['entitlements']))
+        
+        user.delete()
+        print ("...user deleted")
+    except Exception as ex:
+        print (str(sys.exc_info()) + "\n")
+        logging.error(ex)
+
+for index, source_user in userDF.iterrows():
+    print ("Attempting to delete user: {}".format(source_user["Username"]))
+    logging.info("Attempting to delete user: {}".format(source_user["Username"]))
+    user = gis.users.get(source_user["Username"])
+    
+    deleteUser(user)
+    
+```
