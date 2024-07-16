@@ -27,7 +27,10 @@ In the code below I have it hardwired to add SAML users  (provider = 'enterprise
 from arcgis.gis import GIS
 import pandas as pd
 import sys, os
-
+import traceback
+from datetime import datetime
+import logging
+import openpyxl
 
 admin_username = 'adminuser'
 portal_url = 'https://something.else.com/portal'
@@ -35,6 +38,9 @@ password = 'password
 gis = GIS(portal_url, admin_username, password)#, verify_cert = False, expiration = 9999)
 
 basePath = r""
+logging.basicConfig(filename = os.path.join(basePath,"UserLog_{}.txt".format(now.strftime("%Y%m%d%H%M%S"))), level=logging.INFO)
+logging.info("{}  Begin user migration".format(str(now)))
+
 usermapXLS = os.path.join(basePath, "UserMapping.xlsx")
 userDF = pd.read_excel(usermapXLS, engine='openpyxl')
 
@@ -52,12 +58,28 @@ def createUser(user, source_user):
                             lastname = lastName,
                             email = email,
                             description = user.description,
-                            user_type = "creatorUT",
-                            role = user.role,
+                            user_type = user.userLicenseTypeId,
+                            role = user.roleId,
                             provider = 'enterprise',
                             idp_username=idpUsername)
     return target_user
 
+def updateAddOns(sourceUser, target_user):
+    licenses = gis.admin.license.all()
+    for lic in licenses:
+        try:
+            licType = lic.properties['listing']['title']
+            ents = lic.user_entitlement(sourceUser.username)
+
+            license = gis.admin.license.get(licType)
+
+            if ents:
+                print (ents['entitlements'])
+                license.assign(username=target_user.username, entitlements=ents['entitlements'])
+        except Exception as ex:
+            print (str(sys.exc_info()) + "\n")
+            logging.error(ex)
+    
 
 def transferGroups(user, target_user):
     targetUserId = target_user.id
@@ -67,14 +89,25 @@ def transferGroups(user, target_user):
     #print (usergroups)
 
     for group in usergroups:
-        grp = gis.groups.get(group['id'])
-        if (grp.owner == user.username):
-            result = grp.reassign_to(target_user)
-            print ("Reassigned group result:  {}: {}".format(grp.title, result))
-        else:
-            result = grp.add_users(target_user, admin=target_user) 
-            print ("Added group result:  {}: {}".format(grp.title, result))
-            #grp.remove_users(orig_userid) 
+        groupname = group['title']
+        try:
+            logging.info("Adding new user to group: {}".format(groupname))
+            grp = gis.groups.get(group['id'])
+            members = grp.get_members()
+            if (grp.owner == user.username):
+                result = grp.reassign_to(target_user)
+                print ("Reassigned group result:  {}: {}".format(grp.title, result))
+                logging.info ("Reassigned group result:  {}: {}".format(grp.title, result))
+            else:
+                result = grp.add_users(usernames=target_user.username)
+                print ("Added group result:  {}: {}".format(grp.title, result))
+                if user.username in members['admins']:
+                    grp.update_users_roles(managers = [target_user])
+                #grp.remove_users(orig_userid)
+        except Exception as ex:
+            print (ex)
+            logging.error("Error assigning user to group")
+            logging.error(ex) 
 
 
 def transferContent(user, target_user):
@@ -83,28 +116,97 @@ def transferContent(user, target_user):
     usercontent = user.items()
     
     for item in usercontent:
-        item.reassign_to(target_user.username)
-        print ("Reassigned item:  {}, {}".format(item.title, item.type))
+        errorItem = {}
+        try:
+            logging.info("Reassigning item: {}  -  {}".format(item.title, item.type))
+            itemsharing = item.shared_with
+            item.unshare(groups=itemsharing['groups'])  #Unshare
+            item.reassign_to(target_user.username)
+            item.share(everyone=itemsharing['everyone'], org=itemsharing['org'], groups=itemsharing['groups'], 
+                       allow_members_to_edit=True)   #reshare
+            
+            print ("Reassigned item:  {}, {}".format(item.title, item.type))
+        except Exception as ex:
+            print (ex)
+            logging.error("Error reassigning item: {}".format(item.title))
+            logging.error(ex)
+            errorItem["title"] = item.title
+            errorList.append(errorItem)
             
     folders = user.folders
     for folder in folders:
-        gis.content.create_folder(folder['title'], target_user)  #assuming folder doesn't exist
-        print ("Creating Folder {}".format(folder['title']))
-        folderitems = olduser.items(folder=folder['title'])
+        folder_list = [i['title'] for i in folders]
+        if folder['title'] not in folder_list:
+            print ("Creating Folder {}".format(folder['title']))
+            gis.content.create_folder(folder['title'], target_user)  #folder doesn't exist
+            
+        folderitems = user.items(folder=folder['title'])
         for item in folderitems:
-            item.reassign_to(target_user.username, target_folder=folder['title'])
-            print ("Reassigned item:  {}, {}".format(item.title, item.type))
+            errorItem = {}
+            try:
+                logging.info("Reassigning item: {}  -  {}".format(item.title, item.type))
+                itemsharing = item.shared_with
+                item.unshare(groups=itemsharing['groups'])  #Unshare
+                item.reassign_to(target_user.username, target_folder=folder['title'])
+                item.share(everyone=itemsharing['everyone'], org=itemsharing['org'], groups=itemsharing['groups'], 
+                           allow_members_to_edit=True)   #reshare
+                print ("Reassigned item:  {}, {}".format(item.title, item.type))
+            except Exception as ex:
+                print (ex)
+                logging.error("Error reassigning item: {}".format(item.title))
+                logging.error(ex)
+                errorItem["title"] = item.title
+                errorList.append(errorItem)
 
 
 #Get current user
+errorList = []
+
+for index, source_user in userDF.iterrows():
+    if source_user["Username"] != "ksullivan@HAWAIICOUNTY":
+        continue
+    logging.info("Attempting to migrate user: {}".format(source_user["Username"]))
+    user = gis.users.get(source_user["Username"])
+    newUsername = source_user["New_Username"]
+    
+    if len(gis.users.search(query=newUsername)) == 0:
+        print ("Creating user {}".format(newUsername))
+        target_user = createUser(user, source_user)
+    else:
+        print ("user exists: {}".format(newUsername))
+        target_user = gis.users.get(source_user["New_Username"])
+        #print ("Updating user")
+        #updateUser(target_user, user)
+        
+    if target_user == None or not target_user:
+        print ("target user not created or does not exist")
+        continue
+        
+    print ("  Update AddOn Licenses")
+    #updateAddOns(user, target_user)
+    
+    print ("  updating groups")
+    #transferGroups(user, target_user)
+    
+    print ("  transferring content")
+    transferContent(user, target_user)
+    
+    logging.info("Successfully transferred user: {}".format(target_user.username))
+
+#ExportErrorList
+now = datetime.now()
+errlistname = "Error_List_{}.txt".format(now.strftime("%Y%m%d%H%M%S"))
+errorListXLS = os.path.join(basePath,  errlistname)
+
+df = pd.DataFrame.from_dict(errorList)
+
+with pd.ExcelWriter(errorListXLS, engine='openpyxl') as writer:
+    df.to_excel(writer)
+
+# DISABLE ALL USERS IN LIST
 for index, source_user in userDF.iterrows():
     user = gis.users.get(source_user["Username"])
-    
-    target_user = createUser(user, source_user)
-    
-    transferGroups(user, target_user)
-    
-    transferContent(user, target_user)
-
+    print (user.username, user.level, user.role, user.roleId)
+    user.disable()
 ```
 
