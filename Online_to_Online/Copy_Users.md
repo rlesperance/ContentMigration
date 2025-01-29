@@ -88,8 +88,8 @@ def copy_user(target_portal, source_user, password):
 
     userType = source_user.user_types()['name']
 
-    userRole = source_user.role
-    if userRole == "org_admin":
+    userRole = source_user.roleId
+    if source_user.role == "org_admin":
         userRole = "org_user"
 
     try: 
