@@ -38,6 +38,7 @@ password = 'password
 gis = GIS(portal_url, admin_username, password)#, verify_cert = False, expiration = 9999)
 
 basePath = r""
+now = datetime.now()
 logging.basicConfig(filename = os.path.join(basePath,"UserLog_{}.txt".format(now.strftime("%Y%m%d%H%M%S"))), level=logging.INFO)
 logging.info("{}  Begin user migration".format(str(now)))
 
