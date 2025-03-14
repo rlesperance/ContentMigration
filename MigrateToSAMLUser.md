@@ -163,8 +163,6 @@ def transferContent(user, target_user):
 errorList = []
 
 for index, source_user in userDF.iterrows():
-    if source_user["Username"] != "ksullivan@HAWAIICOUNTY":
-        continue
     logging.info("Attempting to migrate user: {}".format(source_user["Username"]))
     user = gis.users.get(source_user["Username"])
     newUsername = source_user["New_Username"]
