@@ -65,6 +65,14 @@ def createUser(user, source_user):
                             idp_username=idpUsername)
     return target_user
 
+
+def updateCategories(user, target_user):
+    try:
+        gis.users.assign_categories([target_user], user.categories)
+    catch exception as ex:
+        print ("unable to tranfer categories")
+        print (ex)
+
 def updateAddOns(sourceUser, target_user):
     licenses = gis.admin.license.all()
     for lic in licenses:
@@ -169,8 +177,13 @@ for index, source_user in userDF.iterrows():
     newUsername = source_user["New_Username"]
     
     if len(gis.users.search(query=newUsername)) == 0:
-        print ("Creating user {}".format(newUsername))
-        target_user = createUser(user, source_user)
+        try:
+            print ("Creating user {}".format(newUsername))
+            target_user = createUser(user, source_user)
+        catch exception as Ex:
+            print ("user {} not created".format(newUsername))
+            logging.error(Ex)
+            continue
     else:
         print ("user exists: {}".format(newUsername))
         target_user = gis.users.get(source_user["New_Username"])
@@ -181,14 +194,30 @@ for index, source_user in userDF.iterrows():
         print ("target user not created or does not exist")
         continue
         
-    print ("  Update AddOn Licenses")
-    #updateAddOns(user, target_user)
+    #This is where you can either use variables to bulk decide what functions to run, or...
+    # you can use columns in the spreadsheet.  
+    doCats = True  #source_user["doCats"]
+    doAddOns = True
+    doGroups = True 
+    doContent = True 
     
-    print ("  updating groups")
-    #transferGroups(user, target_user)
+    if doCats:
+        print ("  Update User Categories")
+        updateCategories(user, target_user)
+        
+    if doAddOns:
+        print ("  Update AddOn Licenses")
+        updateAddOns(user, target_user)
     
-    print ("  transferring content")
-    transferContent(user, target_user)
+    if doGroups:
+        print ("  updating groups")
+        success = transferGroups(user, target_user)
+        if success = False:  #If not added to all groups, don't run content
+            continue
+    
+    if doContent:
+        print ("  transferring content")
+        transferContent(user, target_user)
     
     logging.info("Successfully transferred user: {}".format(target_user.username))
 
