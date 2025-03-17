@@ -20,7 +20,7 @@ Email:
 
 In the code below I have it hardwired to add SAML users  (provider = 'enterprise').  You could recode this to go the other direction, but you'd leave out the IDP username variable. 
 
-## Code
+## Main code
 
 ```python
 
@@ -238,7 +238,7 @@ for index, source_user in userDF.iterrows():
     user.disable()
 ```
 
-## Code
+## Delete Users
 Optional code for using the same spreadsheet input to delete the users. 
 Must remove their add-on extension licensing before removing them
    - (also assumes they don't now own any content)
