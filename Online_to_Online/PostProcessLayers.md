@@ -4,7 +4,6 @@ This code modifies items that have been copied by the copy_items routine and nee
    - Change the name if necessary
    - Sets ownership based on name mapping
    - Adds to groups using group ID mapping
-   - Adds categories if desired (in prep xls)
 
 Uses a user name map created with the Create Users script in this code repository. 
 Alternatively the XLSX can be created manually:
