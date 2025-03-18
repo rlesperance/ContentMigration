@@ -128,11 +128,14 @@ def transferContent(user, target_user):
         errorItem = {}
         try:
             logging.info("Reassigning item: {}  -  {}".format(item.title, item.type))
-            itemsharing = item.shared_with
-            item.unshare(groups=itemsharing['groups'])  #Unshare
-            item.reassign_to(target_user.username)
-            item.share(everyone=itemsharing['everyone'], org=itemsharing['org'], groups=itemsharing['groups'], 
-                       allow_members_to_edit=True)   #reshare
+            itemsharing = item.sharing
+            groups = itemsharing.groups.list()
+            
+            for group in groups:
+                itemsharing.groups.remove(group)
+            item.reassign_to(target_user.username, target_folder=folder['title'])
+            for group in groups:
+                itemsharing.groups.add(group)
             
             print ("Reassigned item:  {}, {}".format(item.title, item.type))
         except Exception as ex:
@@ -140,6 +143,8 @@ def transferContent(user, target_user):
             logging.error("Error reassigning item: {}".format(item.title))
             logging.error(ex)
             errorItem["title"] = item.title
+            errorItem["sharing"] = itemsharing.sharing_level
+            #errorItem["groups"] = itemsharing['groups']
             errorList.append(errorItem)
             
     folders = user.folders
@@ -154,17 +159,23 @@ def transferContent(user, target_user):
             errorItem = {}
             try:
                 logging.info("Reassigning item: {}  -  {}".format(item.title, item.type))
-                itemsharing = item.shared_with
-                item.unshare(groups=itemsharing['groups'])  #Unshare
+                itemsharing = item.sharing
+                groups = itemsharing.groups.list()
+                
+                for group in groups:
+                    itemsharing.groups.remove(group)
                 item.reassign_to(target_user.username, target_folder=folder['title'])
-                item.share(everyone=itemsharing['everyone'], org=itemsharing['org'], groups=itemsharing['groups'], 
-                           allow_members_to_edit=True)   #reshare
+                for group in groups:
+                    itemsharing.groups.add(group)
+                    
                 print ("Reassigned item:  {}, {}".format(item.title, item.type))
             except Exception as ex:
                 print (ex)
                 logging.error("Error reassigning item: {}".format(item.title))
                 logging.error(ex)
                 errorItem["title"] = item.title
+                errorItem["sharing"] = itemsharing.sharing_level
+                #errorItem["groups"] = itemsharing.groups.list()
                 errorList.append(errorItem)
 
 
