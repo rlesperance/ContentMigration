@@ -54,7 +54,6 @@ logging.info("{}  Begin user migration".format(str(now)))
 
 userXLS = os.path.join(basePath,  "User_Mapping.xlsx")
 groupXLS = os.path.join(basePath,  "Group_Mapping.xlsx")
-itemsXLS = os.path.join(basePath,  "Item_Prep.xlsx")
 itemMapXLS = os.path.join(basePath,  "Item_Mapping.xlsx")
 
 #Are we replicating item properties?
@@ -81,7 +80,6 @@ Group IDs in the target must be mapped to the IDs from the source
 ```python
 userDF = pd.read_excel(userXLS, engine='openpyxl')  # User mapping XLS
 groupDF = pd.read_excel(groupXLS,  engine='openpyxl')  # Group mapping XLS
-itemsDF = pd.read_excel(itemsXLS,  engine='openpyxl')  # Item Prep XLS
 newitemsDF = pd.read_excel(itemMapXLS,  engine='openpyxl')  #Item Mapping XLS
 ```
 
@@ -109,17 +107,13 @@ def groupIDsList(groups):
             print ("Cannot identify new group for {}".format(group))
     return grouplist
 
-def updateProperties(source_item, item):
-
-    target_item = target.content.get(item["TargetID"])
+def updateProperties(orig_item, target_item):
     
-    print("Setting items for {}: Type: {}  for {}".format(source_item["title"], source_item["type"], source_item["owner"]))
-    logging.info("Setting items for {}: Type: {}  for {}".format(source_item["title"], source_item["type"], source_item["owner"]))
-
-    orig_item = source.content.get(source_item["itemID"])
+    print("Setting items for {}: Type: {}  for {}".format(orig_item.title, orig_item.type, orig_item.owner))
+    logging.info("Setting items for {}: Type: {}  for {}".format(orig_item.title, orig_item.type, orig_item.owner))
 
     #Update Item Owner
-    newOwner = getNewUsername(source_item["owner"])
+    newOwner = getNewUsername(orig_item.owner)
     print ("Updating owner to {}".format(newOwner))
     target_item.reassign_to(newOwner)
 
@@ -131,24 +125,30 @@ def updateProperties(source_item, item):
         targetMapParse = targetMap[0].partition("-")[2]
         print ("  Source keyword exists: {}".format(targetMapParse))
     else:
-        keywords.append('source-{}'.format(source_item['itemID']))
+        keywords.append('source-{}'.format(orig_item.itemid))
         target_item.update(item_properties={'typeKeywords':keywords})
         print ("  keywords applied:  {}".format(keywords))
 
     #Set sharing (privacy) information
     print ("Set sharing for item {}".format(target_item.title))
-    share_everyone = orig_item.access == 'public'
-    share_org = orig_item.access in ['org', 'public']
-    share_groups = []
-    if 'groups' in source_item:
-        print ("creating sharing groups...")
-        share_groups = groupIDsList(source_item["groups"])
-    print (share_everyone, share_org, share_groups)
-    target_item.share(everyone=share_everyone, org=share_org, groups=share_groups)
+	orig_sharing = orig_item.sharing 
+	target_sharing = target_item.sharing 
+	
+	target_sharing.sharing_level = orig_sharing.sharing_level 
+	
+    share_groups = orig_sharing.groups
+    for group in share_groups.list():
+		newID = groupDF.loc[groupDF.sourceID == group.id]
+        if len(newIDs) > 0:
+            newgroup = gis.groups.get(newID[0])
+            target_sharing.groups.add(newgroup)
+        else:
+            print ("Cannot identify new group for {}".format(group))
+
 
     #might need to check if categories keyword exists if org has no categories
-    categories = source_item["Categories"]
-    itemlist = [{target_item.id:{"categories": ["/Categories/{}".format(categories)]}}]
+    categories = orig_item.categories
+    itemlist = [{target_item.id:{"categories": categories}}]
     if len(categories) > 0:
         target.content.categories.assign_to_items(items=itemlist)
 ```
@@ -156,9 +156,10 @@ def updateProperties(source_item, item):
 ## Loop through items from xls prep and clone
 
 ```python
-for index, target_item in newitemsDF.iterrows():
-    sourceID = target_item["SourceID"]
-    source_items = itemsDF.loc[(itemsDF.itemID == sourceID)]
+for index, target_row in newitemsDF.iterrows():
+	orig_item = source.content.get(target_row["SourceID"])
+	
+	target_item = target.content.get(target_row["TargetID"])
     
-    updateProperties(source_items.iloc[0], target_item)
+   updateProperties(orig_item, target_item)
 ```
