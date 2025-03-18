@@ -130,10 +130,10 @@ def updateProperties(orig_item, target_item):
 
     #Set sharing (privacy) information
     print ("Set sharing for item {}".format(target_item.title))
-	orig_sharing = orig_item.sharing 
-	target_sharing = target_item.sharing 
+    orig_sharing = orig_item.sharing 
+    target_sharing = target_item.sharing 
 	
-	target_sharing.sharing_level = orig_sharing.sharing_level 
+    target_sharing.sharing_level = orig_sharing.sharing_level 
 	
     share_groups = orig_sharing.groups
     for group in share_groups.list():
