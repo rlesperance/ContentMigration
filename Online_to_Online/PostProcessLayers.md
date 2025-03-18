@@ -138,7 +138,7 @@ def updateProperties(orig_item, target_item):
 	
     share_groups = orig_sharing.groups
     for group in share_groups.list():
-		newID = groupDF.loc[groupDF.sourceID == group.id]
+	newID = groupDF.loc[groupDF.sourceID == group.id]
         if len(newIDs) > 0:
             newgroup = gis.groups.get(newID[0])
             target_sharing.groups.add(newgroup)
