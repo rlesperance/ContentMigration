@@ -1,3 +1,5 @@
+## DEPRECATED - see the Portal to Portal folder for the latest updates
+
 ## General workflow 
 For migrating users/groups/roles/content from one ArcGIS Online organization to another
 
